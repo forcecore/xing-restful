@@ -18,7 +18,7 @@ import xing
 import xing.xasession
 import pythoncom
 
-import smoke_test_config as config
+import test_config as config
 
 
 class PriceHandler(RequestHandler):
