@@ -36,8 +36,18 @@ class PriceHandler(RequestHandler):
                 "OutBlock": ("open", "high", "low", "price", "volume")
             }
         )
-        print(result)
-        self.write(result)
+        result = result["OutBlock"]
+
+        odata = {
+            "open": int(result["open"]),
+            "high": int(result["high"]),
+            "low": int(result["low"]),
+            "close": int(result["price"]),
+            "volume": int(result["volume"])
+        }
+        print("Response to client:")
+        print(odata)
+        self.write(odata)
 
 
 def make_app():
