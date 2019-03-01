@@ -11,4 +11,19 @@ and connect to the broker with Xing API.
 
 ## Requirements
 
-xing-plus: https://github.com/sculove/xing-plus
+* tornado (for server)
+* xing-plus: https://github.com/sculove/xing-plus
+* pip install xing-plus
+
+
+## main.py, the server
+
+Run this on the Windows machine.
+The server will listen to 5000 port for clients.
+DO NOT run this in public places.
+You must only use the script behind firewall!
+
+
+## sample_client.py
+
+This scipt shows you how to use the server.

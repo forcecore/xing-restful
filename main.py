@@ -1,22 +1,19 @@
 """
 The server program that provides RESTful API
 
-https://github.com/luapz/pyTrader : Some API usage
+http://sculove.github.io/xing-plus/xing.html#module-xing.xasession : xing-plus manual
+
+https://github.com/sculove/xing-plus-app : xing-plus example app from the author
 
 If you have any wonders in TR field values, see XingAPI_Sample.
-
-pip install xing-plus
 """
 
 import tornado
 from tornado.web import Application, RequestHandler
 from tornado.ioloop import IOLoop
-import pandas as pd
 
-import time
 import xing
 import xing.xasession
-import pythoncom
 
 import test_config as config
 
@@ -50,65 +47,30 @@ class PriceHandler(RequestHandler):
         self.write(odata)
 
 
-class MarketOrderHandler(RequestHandler):
+class OrderHandler(RequestHandler):
     def post(self):
         data = tornado.escape.json_decode(self.request.body)
-        print("MarketOrderHandler: incoming")
+        print("OrderHandler: incoming")
         print(data)
 
         assert data['OrdQty'] != 0
         bnstpcode = 2 if data['OrdQty'] < 0 else 1 # 2 for sell, 1 for buy.
         data['OrdQty'] = abs(data['OrdQty'])
 
-        q = xing.xaquery.Query("CSPAT00600")
-        result = q.request(
-            {
-                "InBlock1": {
-                    "AcntNo": data["AcntNo"],
-                    "InptPwd": config.account["pass"],
-                    "IsuNo": data["IsuNo"],
-                    "OrdQty": data["OrdQty"],
-                    "OrdPrc": 0, # 0 for market order
-                    "BnsTpCode": bnstpcode, # "1" for sell, "2" for buy
-                    "OrdprcPtnCode": "03", # "00": limit order, "03" market, "61" jang jeon shi gan oe
-                    "MgntrnCode": "000", # margin trading code
-                    "LoanDt": "", # Dae chool date
-                    "OrdCndiTpCode": "0" # order condition code, Nil, TOC, FOK stuff.
-                }
-            },
-            {
-                "OutBlock1": ("RecCnt",),
-                "OutBlock2": ("RecCnt",)
-            }
-        )
-
-        print("Response to client:")
-        print(result)
-        self.write(result)
-
-
-class LimitOrderHandler(RequestHandler):
-    def post(self):
-        data = tornado.escape.json_decode(self.request.body)
-        print("LimitOrderHandler: incoming")
-        print(data)
-
-        assert data['OrdQty'] != 0
-        bnstpcode = "2" if data['OrdQty'] < 0 else "1" # 2 for sell, 1 for buy.
-        if data['OrdQty'] < 0:
-            data['OrdQty'] *= -1
+        # price == 0 means Market order, code 03. Otherwise, limit order of code 00.
+        ord_prc_ptn_code = "03" if data['OrdPrc'] == 0 else "00"
 
         q = xing.xaquery.Query("CSPAT00600")
         result = q.request(
             {
                 "InBlock1": {
                     "AcntNo": data["AcntNo"],
-                    "InptPwd": config.account["pass"],
+                    "InptPwd": config.user["account_passwd"],
                     "IsuNo": data["IsuNo"],
                     "OrdQty": data["OrdQty"],
-                    "OrdPrc": data["OrdPrc"], # 0 for market order
+                    "OrdPrc": data['OrdPrc'], # 0 for market order
                     "BnsTpCode": bnstpcode, # "1" for sell, "2" for buy
-                    "OrdprcPtnCode": "00", # "00": limit order, "03" market, "61" jang jeon shi gan oe
+                    "OrdprcPtnCode": ord_prc_ptn_code, # "00": limit order, "03" market, "61" jang jeon shi gan oe
                     "MgntrnCode": "000", # margin trading code
                     "LoanDt": "", # Dae chool date
                     "OrdCndiTpCode": "0" # order condition code, Nil, TOC, FOK stuff.
@@ -128,8 +90,7 @@ class LimitOrderHandler(RequestHandler):
 def make_app():
     urls = [
         ("/price", PriceHandler),
-        ("/market", MarketOrderHandler),
-        ("/limit", LimitOrderHandler)
+        ("/order", OrderHandler),
     ]
     return Application(urls, debug=True)
 
@@ -144,11 +105,6 @@ if __name__ == "__main__":
     session = xing.xasession.Session()
     running = session.login(config.server, config.user)
     print("Logging in")
-
-    #while running:
-    #    session.heartbeat()
-    #    pythoncom.PumpWaitingMessages()
-    #    time.sleep(3)
 
     app = make_app()
     app.listen(5000)
