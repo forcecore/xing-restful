@@ -12,6 +12,8 @@ import tornado
 from tornado.web import Application, RequestHandler
 from tornado.ioloop import IOLoop
 
+import json
+
 import xing
 import xing.xasession
 
@@ -87,10 +89,59 @@ class OrderHandler(RequestHandler):
         self.write(result)
 
 
+class BalanceHandler(RequestHandler):
+    def post(self):
+        data = tornado.escape.json_decode(self.request.body)
+        print("BalanceHandler: incoming")
+        print(data)
+
+        # Query to ask about stocks
+        q = xing.xaquery.Query("CSPAQ12300")
+        result1 = q.request(
+            {
+                "InBlock1": {
+                    "RecCnt": 100,
+                    "AcntNo": data["accno"],
+                    "Pwd": config.user["account_passwd"],
+                    "CmsnAppTpCode": 1
+                }
+            },
+            {
+                "OutBlock1": ("RecCnt",),
+                "OutBlock2": ("RecCnt", "", "BalEvalAmt", "MnyOrdAbleAmt", "Dps"),
+                "OutBlock3": (
+                    "IsuNo", "IsuNm", "BalQty"
+                )
+            }
+        )
+
+        # Query to ask about casg
+        q = xing.xaquery.Query("t0424")
+        result2 = q.request(
+            {
+                "InBlock": {
+                    "accno": data["accno"],
+                    "passwd": config.user["account_passwd"],
+                    "charge": 1
+                }
+            },
+            {
+                "OutBlock": ("sunamt", "sunamt2", "tappamt"),
+                "OutBlock1": ("expcode", "jangb", "janqty", "hname")
+            }
+        )
+
+        print("Response to client:")
+        print(result1)
+        print(result2)
+        self.write(json.dumps([result1, result2]))
+
+
 def make_app():
     urls = [
         ("/price", PriceHandler),
         ("/order", OrderHandler),
+        ("/balance", BalanceHandler),
     ]
     return Application(urls, debug=True)
 
