@@ -13,11 +13,13 @@ from tornado.web import Application, RequestHandler
 from tornado.ioloop import IOLoop
 
 import json
+import pandas as pd
 
 import xing
 import xing.xasession
 
 import test_config as config
+#import real_config as config
 
 
 class PriceHandler(RequestHandler):
@@ -109,11 +111,16 @@ class BalanceHandler(RequestHandler):
             {
                 "OutBlock1": ("RecCnt",),
                 "OutBlock2": ("RecCnt", "", "BalEvalAmt", "MnyOrdAbleAmt", "Dps"),
-                "OutBlock3": (
-                    "IsuNo", "IsuNm", "BalQty"
+                "OutBlock3": pd.DataFrame(
+                    columns=["IsuNo", "IsuNm", "BalQty"]
                 )
             }
         )
+        # Convert to json so that it may be sent through HTTP
+        if len(result1['OutBlock3']) == 0:
+            result1['OutBlock3'] = ""
+        else:
+            result1['OutBlock3'] = result1['OutBlock3'].to_json()
 
         # Query to ask about casg
         q = xing.xaquery.Query("t0424")
